@@ -3,7 +3,7 @@ package com.example.lr3aps;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.input.MouseEvent;
+import javafx.scene.input.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
@@ -25,18 +25,32 @@ public class HelloApplication extends Application {
     Caretaker caretaker = new Caretaker();
 
     private void save(){
+        caretaker.cutToCurrent();
         caretaker.addMemento(copyShapes(shapes));
     }
 
     private void load(){
         root.getChildren().clear();
         shapes.clear();
-        shapes.addAll(caretaker.getMemento());
+        shapes.addAll(copyShapes(caretaker.restore()));
+        root.getChildren().addAll(shapes);
+    }
+
+    private void goBack(){
+        load();
+
+    }
+
+    private void goForward(){
+        root.getChildren().clear();
+        shapes.clear();
+        shapes.addAll(copyShapes(caretaker.undoRestore()));
         root.getChildren().addAll(shapes);
     }
 
     @Override
     public void start(Stage primaryStage) {
+        save();
         Button button = new Button("Добавить круг");
         button.setOnMouseClicked(event -> {addCircle();});
         Button button2 = new Button("Добавить прямоугольник");
@@ -51,8 +65,22 @@ public class HelloApplication extends Application {
         VBox vBox = new VBox(hbox, root);
 
         pane.getChildren().add(vBox);
+        KeyCombination ctrlZ = new KeyCodeCombination(KeyCode.Z, KeyCombination.CONTROL_DOWN);
+        KeyCombination ctrlY = new KeyCodeCombination(KeyCode.Y, KeyCombination.CONTROL_DOWN);
 
         Scene scene = new Scene(pane, 1280, 720);
+
+        scene.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
+            if (ctrlZ.match(event)) {
+                goBack();
+            }
+        });
+
+        scene.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
+            if (ctrlY.match(event)) {
+                goForward();
+            }
+        });
 
         primaryStage.setTitle("Редактор фигур");
         primaryStage.setScene(scene);
@@ -77,6 +105,7 @@ public class HelloApplication extends Application {
             shapeStartX = circle.getCenterX();
             shapeStartY = circle.getCenterY();
         }
+
     }
 
     // Обработка перетаскивания мыши
@@ -113,27 +142,32 @@ public class HelloApplication extends Application {
         Shape circle = createCircle(200, 200, 50);
         shapes.add(circle);
         root.getChildren().add(circle);
+        save();
     }
 
     private void addRectangle(){
         Shape rectangle = createRectangle(50,50,100,80);
         shapes.add(rectangle);
         root.getChildren().add(rectangle);
+        save();
     }
 
     private Shape createRectangle(double x, double y, double width, double height){
         Shape rectangle = new Rectangle(x,y,width,height);
         rectangle.setFill(Color.LIGHTBLUE);
         rectangle.setStroke(Color.BLACK);
+        rectangle.setOnMouseReleased(event->{save();});
         rectangle.setOnMousePressed(event -> handleMousePressed(event, rectangle));
         rectangle.setOnMouseDragged(event -> handleMouseDragged(event, rectangle));
         return rectangle;
     }
+
     private Shape createCircle(double x, double y, double radius){
         Shape circle = new Circle(x,y,radius);
         circle.setFill(Color.LIGHTCORAL);
         circle.setStroke(Color.BLACK);
-        circle.setOnMousePressed(event -> handleMousePressed(event, circle));
+        circle.setOnMouseReleased(event->{save();});
+        circle.setOnMouseClicked(event -> handleMousePressed(event, circle));
         circle.setOnMouseDragged(event -> handleMouseDragged(event, circle));
         return circle;
     }
